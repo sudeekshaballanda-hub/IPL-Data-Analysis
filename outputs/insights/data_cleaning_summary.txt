@@ -1,0 +1,16 @@
+
+IPL DATA CLEANING SUMMARY
+=========================
+Original matches: 1095 rows
+Cleaned matches: 1090 rows
+Rows removed: 5
+
+Top 5 teams by wins:
+winner
+Mumbai Indians                 144
+Chennai Super Kings            138
+Kolkata Knight Riders          131
+Royal Challengers Bangalore    116
+Delhi Capitals                 115
+
+Seasons covered: 2007/08 to 2024
