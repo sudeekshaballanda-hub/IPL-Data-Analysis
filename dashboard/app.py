@@ -26,8 +26,8 @@ st.markdown("---")
 # 2. AUTO-DIAGNOSTIC DATA LOADER ENGINE
 @st.cache_data
 def load_dashboard_data():
-    # Handle possible nested directory variations dynamically
-    possible_paths = [
+    # 1. First, check if running locally on your Windows machine
+    possible_local_paths = [
         r"C:\Users\Admin\IPL-DataAnalysis\IPL-Data-Analysis",
         r"C:\Users\Admin\IPL-DataAnalysis"
     ]
@@ -36,8 +36,7 @@ def load_dashboard_data():
     player_stats_path = None
     matches_path = None
     
-    # Locate valid files on disk
-    for path in possible_paths:
+    for path in possible_local_paths:
         test_stats = os.path.join(path, "outputs", "aggregations", "player_stats.csv")
         if os.path.exists(test_stats) and os.path.getsize(test_stats) > 0:
             base_dir = path
@@ -45,35 +44,19 @@ def load_dashboard_data():
             matches_path = os.path.join(path, "outputs", "cleaned_data", "cleaned_matches.csv")
             break
 
-    # SELF-HEALING BLOCK: If files are missing/empty, calculate right here
+    # 2. CLOUD DEPLOYMENT FALLBACK: If local paths aren't found, look inside the GitHub repo structure
     if not player_stats_path:
-        for path in possible_paths:
-            if os.path.exists(os.path.join(path, "outputs", "cleaned_data", "cleaned_matches.csv")):
-                base_dir = path
-                break
-                
-        if not base_dir:
-            st.error("🚨 System Error: Unable to locate 'outputs/cleaned_data' folder directory path structure.")
+        # Streamlit Cloud runs from the root folder of your repository
+        cloud_matches = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "outputs", "cleaned_data", "cleaned_matches.csv"))
+        cloud_stats = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "outputs", "aggregations", "player_stats.csv"))
+        
+        if os.path.exists(cloud_matches):
+            matches_path = cloud_matches
+            player_stats_path = cloud_stats
+        else:
+            st.error("🚨 **Data Files Missing from GitHub!** Please make sure your 'outputs' and 'data' folders are committed and pushed to your online GitHub repository. Check your `.gitignore` file to ensure it isn't blocking them.")
             st.stop()
             
-        matches_path = os.path.join(base_dir, "outputs", "cleaned_data", "cleaned_matches.csv")
-        del_path = os.path.join(base_dir, "data", "deliveries.csv")
-        if not os.path.exists(del_path):
-            del_path = os.path.join(base_dir, "outputs", "cleaned_data", "cleaned_deliveries.csv")
-            
-        # Run real-time background fallback calculations 
-        m_df = pd.read_csv(matches_path)
-        d_df = pd.read_csv(del_path)
-        
-        batting_df = pd.merge(d_df, m_df[['id', 'season']], left_on='match_id', right_on='id')
-        player_run_summary = batting_df.groupby(['season', 'batter'])['batsman_runs'].sum().reset_index()
-        player_run_summary.columns = ['season', 'batsman', 'batsman_runs']
-        
-        agg_dir = os.path.join(base_dir, "outputs", "aggregations")
-        os.makedirs(agg_dir, exist_ok=True)
-        player_stats_path = os.path.join(agg_dir, "player_stats.csv")
-        player_run_summary.to_csv(player_stats_path, index=False)
-        
     # Read finalized data streams cleanly
     matches = pd.read_csv(matches_path)
     player_stats = pd.read_csv(player_stats_path)
